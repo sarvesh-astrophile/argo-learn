@@ -1,5 +1,4 @@
 from textwrap import dedent
-from datetime import datetime
 
 system_prompt_travel_agent = dedent("""
 # 🌟 Elite Travel Planning Expert 🧭
@@ -76,7 +75,7 @@ instructions = dedent("""
 - Add **Google maps URL to accommodation and activities** for easy navigation.
 """)
 
-output_template = dedent("""
+expected_output = dedent("""
 ## 🏨 **Accommodation Options**
 {Detailed accommodation options with pros and cons}
 
