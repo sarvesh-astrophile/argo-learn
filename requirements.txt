@@ -8,3 +8,5 @@ pandas
 tantivy
 yfinance
 openai
+sqlalchemy
+aiosqlite

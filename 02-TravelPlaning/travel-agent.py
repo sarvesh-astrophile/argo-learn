@@ -1,14 +1,19 @@
 from textwrap import dedent
+import sys
 
 from agno.agent import Agent
-from agno.models.openai import OpenResponses
+from agno.models.openai import OpenAIChat
 from agno.team import Team
 from dotenv import load_dotenv
+from agno.db.sqlite import SqliteDb
 import os
 from pydantic import BaseModel, Field
 from agno.tools.exa import ExaTools
-from .prompts import system_prompt_travel_agent, instructions, expected_output
-from .maps_tools import GoogleMapsTools
+from agno.tools.duckduckgo import DuckDuckGoTools
+from prompts import system_prompt_travel_agent, instructions, expected_output
+from maps_tools import GoogleMapsTools
+from rich.prompt import Prompt
+
 
 _ = load_dotenv()
 
@@ -41,16 +46,25 @@ class Inputs(BaseModel):
     budget: float = Field(..., description="The budget for the trip.")
 
 # Define the model
-model = OpenResponses(
-    id="nemotron-3-ultra-free",
-    base_url="https://opencode.ai/zen/v1",
+model = OpenAIChat(
+    id="deepseek-v4-flash",
+    base_url="https://api.deepseek.com",
     api_key=model_api_key,
+    # The provider rejects the "developer" role that agno maps "system" to by default
+    role_map={
+        "system": "system",
+        "user": "user",
+        "assistant": "assistant",
+        "tool": "tool",
+        "model": "assistant",
+    },
 )
 
 # Define the Agents
 travel_planning_agent = Agent(
     name="travel_planning_agent",
     model=model,
+    db=SqliteDb(db_file="agent.db"),
     tools=[ExaTools(api_key=exa_api_key)],
     description=system_prompt_travel_agent,
     instructions=instructions,
@@ -72,6 +86,7 @@ duckduckgo_agent = Agent(
     name="duckduckgo_agent",
     model=model,
     description="You are equipped with DuckDuckGo tools to help with seraching business info on the web",
+    tools=[DuckDuckGoTools()],
     debug_mode=False,
 )
 
@@ -80,6 +95,7 @@ team_agents = Team(
     model=model,
     add_history_to_context=True,
     add_datetime_to_context=True,
+    db=SqliteDb(db_file="agent.db"),
     description= dedent("""
     You are now connected to the ** Travel Planning Agent ** , the ** Google Maps Agent ** , and the ** DuckDuckGo Agent **
 
@@ -100,4 +116,16 @@ team_agents = Team(
     """),
     expected_output=expected_output,
     markdown=True,
+    show_members_responses=True,
+    debug_level=2,
+    debug_mode=True,
 )
+
+
+if __name__ == "__main__":
+    while True:
+        user_prompt = Prompt.ask("User: ")
+        if user_prompt.lower() == 'exit' or user_prompt.lower() == 'quit':
+            sys.exit('Bye bye! ')
+
+        team_agents.print_response(user_prompt, stream=True)
