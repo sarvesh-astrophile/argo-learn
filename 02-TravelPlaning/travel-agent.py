@@ -86,7 +86,7 @@ duckduckgo_agent = Agent(
     name="duckduckgo_agent",
     model=model,
     description="You are equipped with DuckDuckGo tools to help with seraching business info on the web",
-    tools=[DuckDuckGoTools()],
+    tools=[DuckDuckGoTools(backend="auto")],  # "duckduckgo" backend gets rate-limited; "auto" falls back to other engines
     debug_mode=False,
 )
 
