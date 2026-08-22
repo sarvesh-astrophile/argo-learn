@@ -3,12 +3,12 @@ try:
 except ImportError:
     raise ImportError("The 'httpx' module is required. Run 'pip install httpx' to install the library.")
 
-from typing import cast
+from typing import Any, cast
 
 from agno.tools import Toolkit
 
 class GoogleMapsTool(Toolkit):
-    def __init__(self, google_maps_api_key: str, **kwargs: Any):
+    def __init__(self, google_maps_api_key: str, **kwargs: Any):  # pyright: ignore[reportAny, reportExplicitAny]
         self.api_key: str = google_maps_api_key
         self.base_url: str = 'https://maps.googleapis.com/maps/api'
 
@@ -16,7 +16,7 @@ class GoogleMapsTool(Toolkit):
             self.get_place_maps_url
         ]
 
-        super().__init__(name='google_maps_tool', tools=tools, **kwargs)
+        super().__init__(name='google_maps_tool', tools=tools, **kwargs)  # pyright: ignore[reportAny]
 
 
     def get_place_maps_url(self, place_name: str) -> str:
