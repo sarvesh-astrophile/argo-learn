@@ -1,0 +1,6 @@
+{
+  "executionEnvironments": [
+    { "root": "01-BasicAgents" },
+    { "root": "02-TravelPlaning" }
+  ]
+}

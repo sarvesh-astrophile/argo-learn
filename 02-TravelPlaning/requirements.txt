@@ -3,3 +3,5 @@ openai
 exa_py
 httpx
 duckduckgo_search
+python-dotenv
+rich

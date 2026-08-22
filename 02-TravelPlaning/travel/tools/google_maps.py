@@ -7,6 +7,7 @@ from typing import Any, cast
 
 from agno.tools import Toolkit
 
+
 class GoogleMapsTools(Toolkit):
     def __init__(self, google_maps_api_key: str, **kwargs: Any):  # pyright: ignore[reportAny, reportExplicitAny]
         self.api_key: str = google_maps_api_key
@@ -17,7 +18,6 @@ class GoogleMapsTools(Toolkit):
         ]
 
         super().__init__(name='google_maps_tool', tools=tools, **kwargs)  # pyright: ignore[reportAny]
-
 
     def get_place_maps_url(self, place_name: str) -> str:
         """
