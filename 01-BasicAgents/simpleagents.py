@@ -40,4 +40,4 @@ agent_team = Team(
     model=model,
 )
 
-agent_team.print_response("Who won the latest cricket match? india vs")
+agent_team.print_response("Who won the latest cricket match? india vs")  # pyright: ignore[reportUnknownMemberType]
