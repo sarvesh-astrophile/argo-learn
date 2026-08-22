@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 import os
 
 
-load_dotenv()
+_ = load_dotenv()
 
 google_maps_api_key = os.getenv("GOOGLE_MAPS_PLACES_API_KEY")
 if not google_maps_api_key:

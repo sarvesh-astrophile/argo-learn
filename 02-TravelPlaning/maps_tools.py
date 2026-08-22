@@ -3,12 +3,14 @@ try:
 except ImportError:
     raise ImportError("The 'httpx' module is required. Run 'pip install httpx' to install the library.")
 
+from typing import Any
+
 from agno.tools import Toolkit
 
 class GoogleMapsTool(Toolkit):
-    def __init__(self, google_maps_api_key: str, **kwargs):
-        self.api_key = google_maps_api_key
-        self.base_url = 'https://maps.googleapis.com/maps/api'
+    def __init__(self, google_maps_api_key: str, **kwargs: Any):
+        self.api_key: str = google_maps_api_key
+        self.base_url: str = 'https://maps.googleapis.com/maps/api'
 
         tools = [
             self.get_place_maps_url
@@ -36,14 +38,15 @@ class GoogleMapsTool(Toolkit):
 
         try:
             response = httpx.get(search_endpoint, params=params)
-            response.raise_for_status()
-            data = response.json()
-            if 'results' in data:
-                place_id = data['results'][0]['place_id']
+            _ = response.raise_for_status()
+            data: dict[str, Any] = response.json()
+            if 'results' in data and data['results']:
+                place_id: str = data['results'][0]['place_id']
 
                 # Create a Google Maps URL using the place_id
                 maps_url = f'https://www.google.com/maps/place/?q=place_id:{place_id}'
                 return maps_url
+            return f'No results found for place: {place_name}'
 
         except httpx.HTTPStatusError as e:
             return f'HTTP error occurred: {str(e)}'

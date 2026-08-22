@@ -7,7 +7,7 @@ from agno.tools.duckduckgo import DuckDuckGoTools
 from agno.tools.yfinance import YFinanceTools
 from agno.team import Team
 
-load_dotenv()
+_ = load_dotenv()
 
 api_key = os.getenv("API_KEY")
 if not api_key:
