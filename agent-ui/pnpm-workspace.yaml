@@ -1,0 +1,5 @@
+onlyBuiltDependencies:
+  - sharp
+
+overrides:
+  picomatch: ">=2.3.2"

@@ -6,3 +6,6 @@ duckduckgo_search
 python-dotenv
 rich
 yfinance
+fastapi
+uvicorn
+ag-ui-protocol

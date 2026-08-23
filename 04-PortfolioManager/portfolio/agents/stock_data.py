@@ -13,10 +13,10 @@ def build_stock_data_agent(model: OpenAIChat) -> Agent:
         description="Pulls current prices, fundamentals, analyst recommendations, and company news via Yahoo Finance.",
         tools=[
             YFinanceTools(
-                stock_price=True,
-                analyst_recommendations=True,
-                company_info=True,
-                company_news=True,
+                enable_stock_price=True,
+                enable_company_info=True,
+                enable_analyst_recommendations=True,
+                enable_company_news=True,
             ),
             PortfolioTools(),
         ],

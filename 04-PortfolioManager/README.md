@@ -40,3 +40,19 @@ python main.py
 
 Type `exit` or `quit` to stop. Set `AGNO_DEBUG=false` in `.env` to silence
 team debug output.
+
+## Run over AG-UI
+
+```bash
+python server.py   # serves http://localhost:9001
+```
+
+Exposes the team at `POST /portfolio/agui` speaking the [AG-UI protocol](https://docs.agno.com/agent-os/interfaces/ag-ui/introduction)
+(SSE events). Connect any AG-UI-compatible frontend to that URL, e.g.
+
+```bash
+npx create-agent-ui@latest   # then point it at http://localhost:9001/portfolio/agui
+```
+
+or use CopilotKit / `@ag-ui/client`'s `HttpAgent({ url: ... })`.
+
