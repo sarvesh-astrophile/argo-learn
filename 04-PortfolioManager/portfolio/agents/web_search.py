@@ -1,6 +1,6 @@
 from agno.agent import Agent
 from agno.models.openai import OpenAIChat
-from agno.tools.duckduckgo import DuckDuckGoTools
+from agno.tools.websearch import WebSearchTools
 
 
 def build_web_search_agent(model: OpenAIChat) -> Agent:
@@ -10,6 +10,6 @@ def build_web_search_agent(model: OpenAIChat) -> Agent:
         role="Web search specialist",
         description="Searches the web to fill in missing information about companies, funds, and market events.",
         # "duckduckgo" backend gets rate-limited; "auto" falls back to other engines
-        tools=[DuckDuckGoTools(backend="auto")],
+        tools=[WebSearchTools(backend="google")],
         debug_mode=False,
     )

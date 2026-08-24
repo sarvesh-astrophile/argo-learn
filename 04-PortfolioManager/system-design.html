@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio Manager — System Design</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg2: #161b22;
+    --card: #1a212b;
+    --border: #2d3748;
+    --text: #e6edf3;
+    --muted: #9aa7b5;
+    --accent: #58a6ff;
+    --accent2: #7ee787;
+    --warn: #f2cc60;
+    --danger: #ff7b72;
+    --purple: #bc8cff;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; scroll-padding-top: 70px; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.6; }
+
+  /* ---------- Nav ---------- */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(13,17,23,.92); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: .25rem;
+    padding: .6rem 1.25rem; flex-wrap: wrap;
+  }
+  nav .brand { font-weight: 700; margin-right: 1rem; color: var(--accent); white-space: nowrap; }
+  nav a {
+    color: var(--muted); text-decoration: none; font-size: .85rem;
+    padding: .3rem .65rem; border-radius: 6px; white-space: nowrap;
+  }
+  nav a:hover { color: var(--text); background: var(--card); }
+
+  /* ---------- Layout ---------- */
+  main { max-width: 1100px; margin: 0 auto; padding: 2rem 1.25rem 5rem; }
+  section { margin-bottom: 3.5rem; }
+  h1 { font-size: 2rem; letter-spacing: -.02em; }
+  h2 {
+    font-size: 1.35rem; margin-bottom: 1.1rem; padding-bottom: .45rem;
+    border-bottom: 1px solid var(--border);
+  }
+  h2 .num { color: var(--accent); font-family: var(--mono); margin-right: .5rem; font-size: 1.05rem; }
+  h3 { font-size: 1.05rem; margin: 1.2rem 0 .6rem; color: var(--accent2); }
+  p { margin-bottom: .8rem; color: var(--muted); }
+  p strong, li strong { color: var(--text); }
+  code {
+    font-family: var(--mono); font-size: .85em;
+    background: var(--card); border: 1px solid var(--border);
+    padding: .1em .35em; border-radius: 5px; color: var(--accent2);
+  }
+  ul { padding-left: 1.25rem; color: var(--muted); margin-bottom: .8rem; }
+  li { margin-bottom: .3rem; }
+  .hero { padding: 2.5rem 0 1rem; }
+  .hero .tagline { font-size: 1.05rem; margin-top: .5rem; }
+  .badges { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
+  .badge {
+    font-family: var(--mono); font-size: .75rem; padding: .25rem .7rem;
+    border-radius: 999px; border: 1px solid var(--border);
+    background: var(--card); color: var(--muted);
+  }
+  .badge b { color: var(--accent); font-weight: 600; }
+
+  /* ---------- Cards ---------- */
+  .grid { display: grid; gap: 1rem; }
+  .g2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+  .g3 { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+  .g4 { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.1rem 1.2rem;
+  }
+  .card h4 { font-size: .95rem; margin-bottom: .35rem; display: flex; align-items: center; gap: .5rem; }
+  .card p, .card li { font-size: .87rem; }
+  .chip {
+    font-family: var(--mono); font-size: .68rem; padding: .15rem .55rem;
+    border-radius: 999px; white-space: nowrap; font-weight: 600;
+  }
+  .chip.blue   { background: rgba(88,166,255,.14); color: var(--accent); }
+  .chip.green  { background: rgba(126,231,135,.14); color: var(--accent2); }
+  .chip.purple { background: rgba(188,140,255,.14); color: var(--purple); }
+  .chip.yellow { background: rgba(242,204,96,.14);  color: var(--warn); }
+  .chip.red    { background: rgba(255,123,114,.14); color: var(--danger); }
+
+  /* ---------- Diagram ---------- */
+  .diagram { overflow-x: auto; padding: .5rem 0; }
+  .layer {
+    display: flex; justify-content: center; gap: .9rem;
+    flex-wrap: nowrap; min-width: min-content; margin: 0 auto;
+  }
+  .node {
+    background: var(--bg2); border: 1.5px solid var(--border);
+    border-radius: 10px; padding: .7rem 1rem; text-align: center;
+    min-width: 170px; position: relative;
+  }
+  .node .t { font-weight: 700; font-size: .85rem; }
+  .node .s { font-size: .72rem; color: var(--muted); font-family: var(--mono); }
+  .node.user      { border-color: var(--accent); }
+  .node.entry     { border-color: var(--warn); }
+  .node.team      { border-color: var(--accent2); background: rgba(126,231,135,.06); min-width: 420px; }
+  .node.agent     { border-color: var(--purple); }
+  .node.tool      { border-color: var(--accent); }
+  .node.ext       { border-color: var(--danger); border-style: dashed; }
+  .node.store     { border-color: var(--warn); }
+  .arrow-row {
+    display: flex; justify-content: center; align-items: center;
+    height: 34px; position: relative; min-width: min-content;
+  }
+  .arrow-row svg { display: block; }
+  .lbl { font-size: .68rem; color: var(--muted); font-family: var(--mono); }
+  .fanout {
+    display: flex; justify-content: center; gap: 1.5rem; min-width: min-content;
+    position: relative; height: 46px;
+  }
+  .fanout::before {
+    content: ""; position: absolute; top: 0; left: 12%; right: 12%;
+    height: 50%; border-left: 1.5px solid var(--border);
+    border-right: 1.5px solid var(--border); border-top: 1.5px solid var(--border);
+    border-radius: 10px 10px 0 0;
+  }
+  .fanout::after {
+    content: ""; position: absolute; top: 50%; left: 12%; right: 12%;
+    height: 50%; border-left: 1.5px solid var(--border);
+    border-right: 1.5px solid var(--border); border-bottom: 1.5px solid var(--border);
+    border-radius: 0 0 10px 10px;
+  }
+  .fanout span {
+    position: absolute; top: 42%; left: 50%; transform: translateX(-50%);
+    background: var(--bg); padding: 0 .5rem;
+    font-size: .68rem; color: var(--muted); font-family: var(--mono); z-index: 2;
+  }
+  .legend { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.2rem; font-size: .78rem; color: var(--muted); }
+  .legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-right: .35rem; vertical-align: -2px; border: 1.5px solid; }
+
+  /* ---------- Tables ---------- */
+  table { width: 100%; border-collapse: collapse; font-size: .86rem; margin: 1rem 0 1.4rem; }
+  th {
+    text-align: left; color: var(--accent); font-weight: 600;
+    padding: .55rem .8rem; border-bottom: 2px solid var(--border);
+    font-size: .78rem; text-transform: uppercase; letter-spacing: .04em;
+  }
+  td { padding: .55rem .8rem; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--muted); }
+  tr:hover td { background: rgba(88,166,255,.04); }
+  td:first-child code, td:nth-child(2) code { white-space: nowrap; }
+
+  /* ---------- Flow steps ---------- */
+  .steps { counter-reset: step; display: grid; gap: .7rem; }
+  .step {
+    display: flex; gap: 1rem; align-items: flex-start;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: .9rem 1.1rem;
+  }
+  .step::before {
+    counter-increment: step; content: counter(step);
+    flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(88,166,255,.14); color: var(--accent);
+    font-family: var(--mono); font-weight: 700; font-size: .85rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step b { display: block; font-size: .92rem; margin-bottom: .15rem; }
+  .step p { margin: 0; font-size: .84rem; }
+
+  /* ---------- Code blocks ---------- */
+  pre {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.15rem; overflow-x: auto; font-family: var(--mono);
+    font-size: .82rem; line-height: 1.55; margin: .8rem 0 1.4rem; color: var(--text);
+  }
+  pre .c { color: var(--muted); } pre .k { color: var(--danger); } pre .s { color: var(--accent2); } pre .f { color: var(--accent); }
+
+  /* ---------- Tree ---------- */
+  .tree { font-family: var(--mono); font-size: .83rem; color: var(--muted); line-height: 1.75; }
+  .tree .dir { color: var(--accent); font-weight: 600; }
+  .tree .note { color: var(--muted); font-style: italic; }
+  .tree .file { color: var(--text); }
+
+  footer {
+    border-top: 1px solid var(--border); padding: 1.5rem;
+    text-align: center; color: var(--muted); font-size: .8rem;
+  }
+  @media (max-width: 720px) {
+    .node.team { min-width: 260px; }
+    .fanout { transform: scale(.85); }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="brand">📊 PortfolioManager</span>
+  <a href="#overview">Overview</a>
+  <a href="#architecture">Architecture</a>
+  <a href="#agents">Agents</a>
+  <a href="#tools">Tools &amp; Toolkits</a>
+  <a href="#flow">Request Flow</a>
+  <a href="#kite">Kite MCP</a>
+  <a href="#stack">Tech Stack</a>
+  <a href="#config">Configuration</a>
+  <a href="#structure">Structure</a>
+  <a href="#run">Running</a>
+</nav>
+
+<main>
+
+<!-- ============ OVERVIEW ============ -->
+<section id="overview">
+  <div class="hero">
+    <h1>Portfolio Management Team — System Design</h1>
+    <p class="tagline">A multi-agent investment portfolio manager built with <strong>Agno</strong>, coordinated as a
+      <strong>Team</strong> of specialist agents: portfolio proposal design, live market data, web-research gap-filling,
+      and personal <strong>Zerodha (Kite)</strong> account access over remote MCP.</p>
+    <div class="badges">
+      <span class="badge">Framework <b>Agno</b></span>
+      <span class="badge">LLM <b>deepseek-v4-flash</b> (OpenAI-compatible)</span>
+      <span class="badge">Serving <b>AgentOS · FastAPI · AG-UI</b></span>
+      <span class="badge">Sessions <b>SQLite (agent.db)</b></span>
+      <span class="badge">Interfaces <b>CLI + AG-UI (SSE)</b></span>
+      <span class="badge">MCP <b>mcp.kite.trade (streamable-http)</b></span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ARCHITECTURE ============ -->
+<section id="architecture">
+  <h2><span class="num">01</span>High-Level Architecture</h2>
+  <p>Two entry points share the same team. The CLI (<code>main.py</code>) runs three agents interactively;
+     the server (<code>server.py</code>) adds the <code>zerodha_agent</code> and exposes the team over the
+     <strong>AG-UI protocol</strong> (SSE events at <code>POST /portfolio/agui</code>).</p>
+
+  <div class="card diagram">
+    <!-- Layer: users -->
+    <div class="layer">
+      <div class="node user"><div class="t">👤 User</div><div class="s">terminal / browser</div></div>
+    </div>
+    <div class="arrow-row">
+      <svg width="16" height="32"><line x1="8" y1="0" x2="8" y2="26" stroke="#58a6ff" stroke-width="1.5"/><polygon points="2,24 14,24 8,32" fill="#58a6ff"/></svg>
+    </div>
+    <!-- Layer: entrypoints -->
+    <div class="layer">
+      <div class="node entry"><div class="t">⌨️ main.py — CLI</div><div class="s">rich REPL · print_response(stream)</div></div>
+      <div class="node entry"><div class="t">🌐 server.py — AgentOS</div><div class="s">FastAPI :9001 · AGUI prefix /portfolio<br>SSE → POST /portfolio/agui</div></div>
+    </div>
+    <div class="arrow-row">
+      <svg width="16" height="32"><line x1="8" y1="0" x2="8" y2="26" stroke="#58a6ff" stroke-width="1.5"/><polygon points="2,24 14,24 8,32" fill="#58a6ff"/></svg>
+    </div>
+    <!-- Layer: team -->
+    <div class="layer">
+      <div class="node team">
+        <div class="t">🧭 Team — portfolio_management_team</div>
+        <div class="s">coordinator model · instructions · expected_output<br>history + datetime in context · show_members_responses</div>
+      </div>
+    </div>
+    <div class="arrow-row">
+      <svg width="16" height="32"><line x1="8" y1="0" x2="8" y2="26" stroke="#bc8cff" stroke-width="1.5"/><polygon points="2,24 14,24 8,32" fill="#bc8cff"/></svg>
+    </div>
+    <div style="text-align:center" class="lbl">delegates to members</div>
+    <!-- Layer: agents -->
+    <div class="layer" style="margin-top:.4rem">
+      <div class="node agent"><div class="t">📈 market_analyst_agent</div><div class="s">portfolio proposal designer</div></div>
+      <div class="node agent"><div class="t">💹 stock_data_agent</div><div class="s">prices · fundamentals</div></div>
+      <div class="node agent"><div class="t">🔎 duckduckgo_agent</div><div class="s">web gap-filler</div></div>
+      <div class="node agent"><div class="t">🪁 zerodha_agent</div><div class="s">server-mode only</div></div>
+    </div>
+    <div class="fanout"><span>tools</span>&nbsp;</div>
+    <!-- Layer: tools -->
+    <div class="layer">
+      <div class="node tool"><div class="t">ExaTools</div><div class="s">exa_py</div></div>
+      <div class="node tool"><div class="t">YFinanceTools</div><div class="s">+ PortfolioTools</div></div>
+      <div class="node tool"><div class="t">WebSearchTools</div><div class="s">backend=google</div></div>
+      <div class="node tool"><div class="t">Kite MCP toolkit</div><div class="s">query_kite gateway<br>MCPContextProvider</div></div>
+    </div>
+    <div class="arrow-row">
+      <svg width="16" height="32"><line x1="8" y1="0" x2="8" y2="26" stroke="#ff7b72" stroke-width="1.5"/><polygon points="2,24 14,24 8,32" fill="#ff7b72"/></svg>
+    </div>
+    <!-- Layer: external -->
+    <div class="layer">
+      <div class="node ext"><div class="t">Exa Search API</div></div>
+      <div class="node ext"><div class="t">Yahoo Finance</div></div>
+      <div class="node ext"><div class="t">Frankfurter (ECB)</div></div>
+      <div class="node ext"><div class="t">Google / DuckDuckGo</div></div>
+      <div class="node ext"><div class="t">Zerodha Kite MCP</div><div class="s">mcp.kite.trade/mcp</div></div>
+      <div class="node ext"><div class="t">DeepSeek API</div><div class="s">api.deepseek.com</div></div>
+    </div>
+    <div class="arrow-row">
+      <svg width="16" height="32"><line x1="8" y1="0" x2="8" y2="26" stroke="#f2cc60" stroke-width="1.5"/><polygon points="2,24 14,24 8,32" fill="#f2cc60"/></svg>
+    </div>
+    <!-- Layer: storage -->
+    <div class="layer">
+      <div class="node store"><div class="t">💾 agent.db (SQLite)</div><div class="s">team + agent sessions · chat history</div></div>
+    </div>
+
+    <div class="legend">
+      <span><i style="border-color:#58a6ff"></i>User / tools</span>
+      <span><i style="border-color:#f2cc60"></i>Entry points &amp; storage</span>
+      <span><i style="border-color:#7ee787"></i>Team coordinator</span>
+      <span><i style="border-color:#bc8cff"></i>Agents</span>
+      <span><i style="border-color:#ff7b72;border-style:dashed"></i>External services</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ AGENTS ============ -->
+<section id="agents">
+  <h2><span class="num">02</span>Agents</h2>
+  <p>Each agent is built by a factory in <code>portfolio/agents/</code> with its own role, description,
+     instructions and expected-output template from <code>portfolio/prompts/</code>.</p>
+
+  <table>
+    <tr><th>Agent</th><th>Factory</th><th>Role</th><th>Responsibility</th><th>Tools</th><th>State</th></tr>
+    <tr>
+      <td><code>market_analyst_agent</code></td>
+      <td><code>build_market_analyst_agent()</code></td>
+      <td>Elite Portfolio Management Expert</td>
+      <td>Assesses investor profile (risk, horizon, goals, constraints), researches macro trends, proposes strategic asset allocation with tickers, weights, risk analysis, cost breakdown and monitoring plan.</td>
+      <td><span class="chip blue">ExaTools</span></td>
+      <td>db (own session)</td>
+    </tr>
+    <tr>
+      <td><code>stock_data_agent</code></td>
+      <td><code>build_stock_data_agent()</code></td>
+      <td>Market Data Specialist</td>
+      <td>Pulls current stock prices, company info/fundamentals, analyst recommendations and company news; computes allocation weights, weighted returns and FX conversions.</td>
+      <td><span class="chip blue">YFinanceTools</span> <span class="chip green">PortfolioTools</span></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><code>duckduckgo_agent</code></td>
+      <td><code>build_web_search_agent()</code></td>
+      <td>Web Search Specialist</td>
+      <td>Fills missing information about companies, funds and market events identified in the proposal.</td>
+      <td><span class="chip purple">WebSearchTools</span></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><code>zerodha_agent</code> <span class="chip yellow">server only</span></td>
+      <td><code>build_zerodha_agent()</code></td>
+      <td>Zerodha Account Specialist</td>
+      <td>Fetches personal Zerodha data — profile, margins, holdings, positions, MF holdings, orders, trades, GTTs, live quotes — via the Kite MCP sub-agent. Read-only by default.</td>
+      <td><span class="chip red">Kite MCP (query_kite)</span></td>
+      <td>own session history</td>
+    </tr>
+  </table>
+
+  <h3>Team coordinator — <code>build_team()</code></h3>
+  <ul>
+    <li>Named <code>portfolio_management_team</code>; shares the same <code>OpenAIChat</code> model and <code>SqliteDb</code> as members.</li>
+    <li><strong>Orchestration policy</strong> (from <code>prompts/team.py</code>): ① get initial portfolio proposal from the market analyst → ② ensure every ticker has current price/fundamental data from the stock-data agent → ③ use web search to fill remaining gaps.</li>
+    <li>Context settings: <code>add_history_to_context=True</code>, <code>add_datetime_to_context=True</code>, <code>markdown=True</code>, <code>show_members_responses=True</code>, debug level 2 gated by <code>AGNO_DEBUG</code>.</li>
+    <li>Re-exports the market-analyst <code>EXPECTED_OUTPUT</code> template so final answers follow the full report format.</li>
+  </ul>
+</section>
+
+<!-- ============ TOOLS ============ -->
+<section id="tools">
+  <h2><span class="num">03</span>Tools &amp; Toolkits</h2>
+
+  <h3>Custom toolkit — <code>PortfolioTools</code> <span class="chip green">portfolio/tools/portfolio.py</span></h3>
+  <p>An Agno <code>Toolkit</code> subclass (<code>name="portfolio_tool"</code>) exposing deterministic finance helpers:</p>
+  <table>
+    <tr><th>Tool</th><th>Signature</th><th>Description</th><th>Backend</th></tr>
+    <tr>
+      <td><code>get_allocation_weights</code></td>
+      <td><code>(portfolio_value: float, allocations: str)</code></td>
+      <td>Dollar amount per asset-class sleeve from <code>"stocks:60,bonds:30,cash:10"</code>-style input; warns when weights ≠ 100%.</td>
+      <td>pure Python</td>
+    </tr>
+    <tr>
+      <td><code>get_portfolio_return</code></td>
+      <td><code>(weights: str, returns: str)</code></td>
+      <td>Weighted expected return of the portfolio; validates equal-length lists and non-zero total weight.</td>
+      <td>pure Python</td>
+    </tr>
+    <tr>
+      <td><code>convert_currency</code></td>
+      <td><code>(amount: float, from_currency: str, to_currency: str)</code></td>
+      <td>FX conversion with rate used; reports missing rates gracefully.</td>
+      <td><code>httpx</code> → Frankfurter API (ECB reference rates)</td>
+    </tr>
+  </table>
+
+  <h3>Bundled Agno toolkits</h3>
+  <table>
+    <tr><th>Toolkit</th><th>Enabled capabilities</th><th>Used by</th></tr>
+    <tr>
+      <td><code>agno.tools.exa.ExaTools</code></td>
+      <td>Real-time market news, analysis &amp; research via Exa search API (<code>EXA_API_KEY</code>)</td>
+      <td>market_analyst_agent</td>
+    </tr>
+    <tr>
+      <td><code>agno.tools.yfinance.YFinanceTools</code></td>
+      <td><code>stock_price</code>, <code>company_info</code>, <code>analyst_recommendations</code>, <code>company_news</code></td>
+      <td>stock_data_agent</td>
+    </tr>
+    <tr>
+      <td><code>agno.tools.websearch.WebSearchTools</code></td>
+      <td>Web search with <code>backend="google"</code> — DuckDuckGo backend is rate-limited, so "auto"/google fallback is used</td>
+      <td>duckduckgo_agent</td>
+    </tr>
+    <tr>
+      <td><code>MCPContextProvider</code> toolkit (wrapped as sub-agent)</td>
+      <td>All Kite tools behind a single gateway tool <code>query_kite</code>; lazy reconnect on first call</td>
+      <td>zerodha_agent</td>
+    </tr>
+  </table>
+</section>
+
+<!-- ============ FLOW ============ -->
+<section id="flow">
+  <h2><span class="num">04</span>Request Flow (happy path)</h2>
+  <div class="steps">
+    <div class="step">
+      <div><b>Input</b>
+      <p>CLI: <code>rich.Prompt.ask</code> loop → <code>team.print_response(prompt, stream=True)</code>.
+         Server: AG-UI client posts to <code>/portfolio/agui</code>; AgentOS streams SSE events back.</p></div>
+    </div>
+    <div class="step">
+      <div><b>Market Analyst drafts the proposal</b>
+      <p>Team delegates to <code>market_analyst_agent</code>: investor assessment → Exa market research →
+         asset-allocation proposal with tickers, weights, risk/cost sections per its structured
+         <code>EXPECTED_OUTPUT</code> markdown template.</p></div>
+    </div>
+    <div class="step">
+      <div><b>Stock Data enriches holdings</b>
+      <p>Team walks the proposed holdings through <code>stock_data_agent</code>: Yahoo Finance quotes, fundamentals,
+         analyst recommendations, news; <code>PortfolioTools</code> computes sleeve dollar amounts, weighted return
+         and currency conversion.</p></div>
+    </div>
+    <div class="step">
+      <div><b>Gap-filling via web search</b>
+      <p>Any missing company/fund/market-event facts are resolved by <code>duckduckgo_agent</code> using Google-backed
+         web search.</p></div>
+    </div>
+    <div class="step">
+      <div><b>Zerodha context (server mode)</b>
+      <p>When asked about the user's own account, <code>zerodha_agent</code> routes requests through <code>query_kite</code>
+         → Kite MCP (holdings, positions, margins, orders, GTTs…), handling OAuth login links if unauthenticated.</p></div>
+    </div>
+    <div class="step">
+      <div><b>Synthesis &amp; persistence</b>
+      <p>Team merges member responses into the final Markdown report (allocation table, risk metrics, costs,
+         action items, sources). Conversation history persists to <code>agent.db</code> for both team and members.</p></div>
+    </div>
+  </div>
+
+  <h3>Kite MCP lifecycle (server mode)</h3>
+  <pre><span class="c"># server.py — FastAPI lifespan owns the connection</span>
+<span class="k">@asynccontextmanager</span>
+<span class="k">async def</span> <span class="f">lifespan</span>(_agent_os):
+    <span class="k">await</span> kite_provider.<span class="f">asetup</span>()   <span class="c"># connect to mcp.kite.trade (streamable-http)</span>
+    <span class="k">try</span>:
+        <span class="k">yield</span>
+    <span class="k">finally</span>:
+        <span class="k">await</span> kite_provider.<span class="f">aclose</span>()  <span class="c"># close MCP session</span>
+
+<span class="c"># MCPContextProvider also reconnects lazily on first tool call if needed</span></pre>
+</section>
+
+<!-- ============ KITE MCP ============ -->
+<section id="kite">
+  <h2><span class="num">05</span>Zerodha Kite MCP Integration</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h4>🔌 Connection <span class="chip red">remote MCP</span></h4>
+      <ul>
+        <li>Endpoint: <code>https://mcp.kite.trade/mcp</code>, transport <code>streamable-http</code>, timeout 60 s.</li>
+        <li><code>MCPContextProvider(server_name="kite", model=…)</code> wraps the server's tools in a <strong>sub-agent</strong> exposed to the zerodha agent as one gateway tool: <code>query_kite</code>.</li>
+        <li>The provider is created unconnected by <code>build_kite_provider()</code>; the caller wires setup/close into the app lifespan.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>🔐 Authentication <span class="chip yellow">browser OAuth</span></h4>
+      <ul>
+        <li>No API keys. On auth errors the agent calls the <code>login</code> tool, which returns an <strong>authorization URL</strong>.</li>
+        <li>User opens the URL, signs into Zerodha in the browser, confirms in chat; agent retries the original request.</li>
+        <li>Guardrails: never invent/shorten the URL; never ask for passwords in chat.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>🛡️ Safety policy <span class="chip green">read-only default</span></h4>
+      <ul>
+        <li>Read operations (quotes, holdings, positions, orders…) run freely.</li>
+        <li>Writes (<code>place_order</code>, <code>modify_order</code>, <code>cancel_order</code>, GTT mutations) require an explicit, confirmed instruction; the agent restates full parameters before acting.</li>
+        <li>Instruments must be resolved via <code>search_instruments</code> — never guessed tokens/segments.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>📋 Reporting conventions</h4>
+      <ul>
+        <li>Holdings/positions rendered as Markdown tables (qty, avg price, LTP, P&amp;L).</li>
+        <li>Unrealized P&amp;L computed from average vs last traded price.</li>
+        <li>Flags: margin shortfalls, unusual exposure, rejected orders.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Kite tool catalog (via <code>query_kite</code>)</h3>
+  <table>
+    <tr><th>Category</th><th>Tools</th></tr>
+    <tr><td><strong>Setup &amp; Auth</strong></td><td><code>login</code></td></tr>
+    <tr><td><strong>Market Data</strong></td><td><code>get_quotes</code>, <code>get_ltp</code>, <code>get_ohlc</code>, <code>get_historical_data</code>, <code>search_instruments</code></td></tr>
+    <tr><td><strong>Portfolio &amp; Account</strong></td><td><code>get_profile</code>, <code>get_margins</code>, <code>get_holdings</code>, <code>get_positions</code>, <code>get_mf_holdings</code></td></tr>
+    <tr><td><strong>Orders &amp; Trading</strong></td><td><code>place_order</code>, <code>modify_order</code>, <code>cancel_order</code>, <code>get_orders</code>, <code>get_trades</code>, <code>get_order_history</code>, <code>get_order_trades</code></td></tr>
+    <tr><td><strong>GTT Orders</strong></td><td><code>get_gtts</code>, <code>place_gtt_order</code>, <code>modify_gtt_order</code>, <code>delete_gtt_order</code></td></tr>
+  </table>
+</section>
+
+<!-- ============ STACK ============ -->
+<section id="stack">
+  <h2><span class="num">06</span>Tech Stack</h2>
+  <div class="grid g3">
+    <div class="card"><h4>🤖 Agent framework <span class="chip blue">agno</span></h4><p><code>Agent</code>, <code>Team</code>, <code>AgentOS</code>, <code>AGUI</code> interface, toolkits, SQLite storage.</p></div>
+    <div class="card"><h4>🧠 LLM <span class="chip green">openai client</span></h4><p><code>OpenAIChat</code> pointed at DeepSeek (<code>id="deepseek-v4-flash"</code>, base_url <code>api.deepseek.com</code>) with a custom <code>role_map</code> since the provider rejects the "developer" role.</p></div>
+    <div class="card"><h4>🔗 Protocol <span class="chip purple">mcp ≥1.9,&lt;2</span></h4><p>Model Context Protocol client for the remote Kite server (streamable-http) via <code>MCPContextProvider</code>.</p></div>
+    <div class="card"><h4>🌐 Serving <span class="chip yellow">fastapi + uvicorn</span></h4><p>AgentOS app on localhost:9001; AG-UI protocol interface streaming SSE events; compatible with CopilotKit / <code>@ag-ui/client</code> HttpAgent / Agent UI.</p></div>
+    <div class="card"><h4>🔍 Research <span class="chip blue">exa_py · duckduckgo_search</span></h4><p>Exa API key for analyst-grade research; Google-backend web search fallback for gaps.</p></div>
+    <div class="card"><h4>📈 Market data <span class="chip green">yfinance · httpx</span></h4><p>Prices, fundamentals, analyst recs, news; custom FX via Frankfurter (ECB).</p></div>
+    <div class="card"><h4>💾 Storage <span class="chip yellow">SqliteDb</span></h4><p><code>agent.db</code> holds sessions/chat history for the team and members; powers <code>add_history_to_context</code>.</p></div>
+    <div class="card"><h4>🖥️ UX <span class="chip purple">rich · python-dotenv</span></h4><p>Rich terminal prompts/streaming output; <code>.env</code> secret loading; <code>AGNO_DEBUG</code> verbosity switch.</p></div>
+    <div class="card"><h4>📡 Frontend <span class="chip blue">AG-UI clients</span></h4><p><code>npx create-agent-ui@latest</code>, CopilotKit, or <code>HttpAgent({url})</code> from <code>@ag-ui/client</code> pointed at <code>/portfolio/agui</code>.</p></div>
+  </div>
+</section>
+
+<!-- ============ CONFIG ============ -->
+<section id="config">
+  <h2><span class="num">07</span>Configuration &amp; Environment</h2>
+  <table>
+    <tr><th>Variable</th><th>Required</th><th>Purpose</th></tr>
+    <tr><td><code>API_KEY</code></td><td>✅</td><td>Model provider key (DeepSeek via OpenAI-compatible API). Missing value raises <code>RuntimeError</code> at startup.</td></tr>
+    <tr><td><code>EXA_API_KEY</code></td><td>✅ (market analyst)</td><td>Exa search API key passed to <code>ExaTools</code>.</td></tr>
+    <tr><td><code>AGNO_DEBUG</code></td><td>optional</td><td>Defaults to <code>true</code>; set <code>false</code> to silence team debug output.</td></tr>
+    <tr><td colspan="3">Kite MCP needs no keys — authentication is browser OAuth via the <code>login</code> tool's authorization URL.</td></tr>
+  </table>
+
+  <h3>Model wiring detail</h3>
+  <pre>OpenAIChat(
+    id=<span class="s">"deepseek-v4-flash"</span>,
+    base_url=<span class="s">"https://api.deepseek.com"</span>,
+    api_key=get_api_key(<span class="s">"API_KEY"</span>),
+    <span class="c"># provider rejects the "developer" role agno maps "system" to by default</span>
+    role_map={<span class="s">"system"</span>: <span class="s">"system"</span>, <span class="s">"user"</span>: <span class="s">"user"</span>,
+              <span class="s">"assistant"</span>: <span class="s">"assistant"</span>, <span class="s">"tool"</span>: <span class="s">"tool"</span>, <span class="s">"model"</span>: <span class="s">"assistant"</span>},
+)</pre>
+</section>
+
+<!-- ============ STRUCTURE ============ -->
+<section id="structure">
+  <h2><span class="num">08</span>Repository Structure</h2>
+  <div class="card tree">
+<span class="file">04-PortfolioManager/</span><br>
+├── <span class="file">main.py</span>                <span class="note"># CLI entrypoint — REPL loop over the 3-agent team</span><br>
+├── <span class="file">server.py</span>              <span class="note"># AG-UI server — AgentOS + AGUI interface, incl. zerodha_agent</span><br>
+├── <span class="file">requirements.txt</span>       <span class="note"># agno, mcp, openai, exa_py, yfinance, fastapi, uvicorn…</span><br>
+├── <span class="file">.env.example</span>           <span class="note"># API_KEY, EXA_API_KEY, optional AGNO_DEBUG</span><br>
+├── <span class="file">agent.db</span>               <span class="note"># SQLite session/history storage</span><br>
+└── <span class="dir">portfolio/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="file">config.py</span>          <span class="note"># env keys, shared OpenAIChat(model), SqliteDb, DEBUG flag</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="file">team.py</span>            <span class="note"># build_team() — coordinator with orchestration instructions</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="dir">agents/</span>            <span class="note"># build_*_agent() factories, one file per agent</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── <span class="file">market_analyst.py</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── <span class="file">stock_data.py</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── <span class="file">web_search.py</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└── <span class="file">zerodha.py</span>     <span class="note"># build_kite_provider() + build_zerodha_agent()</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="dir">prompts/</span>           <span class="note"># per-agent ROLE / DESCRIPTION / SYSTEM_PROMPT / INSTRUCTIONS / EXPECTED_OUTPUT</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── <span class="file">market_analyst.py</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── <span class="file">zerodha.py</span>      <span class="note"># full Kite tool catalog + auth/safety rules</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└── <span class="file">team.py</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="dir">tools/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="file">portfolio.py</span>   <span class="note"># PortfolioTools toolkit (weights, returns, FX)</span>
+  </div>
+</section>
+
+<!-- ============ RUN ============ -->
+<section id="run">
+  <h2><span class="num">09</span>Running the System</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h4>⌨️ CLI mode</h4>
+      <pre>pip install -r requirements.txt
+cp .env.example .env   <span class="c"># add API keys</span>
+python main.py         <span class="c"># type exit/quit to stop</span></pre>
+      <p>Runs the 3-member team (no Zerodha agent) in a Rich REPL with streamed responses.</p>
+    </div>
+    <div class="card">
+      <h4>🌐 Server mode (AG-UI)</h4>
+      <pre>python server.py       <span class="c"># serves http://localhost:9001</span>
+npx create-agent-ui@latest   <span class="c"># point at:</span>
+                       <span class="c"># http://localhost:9001/portfolio/agui</span></pre>
+      <p>Full 4-member team incl. <code>zerodha_agent</code>; MCP session managed in the lifespan hook.
+         First Kite question triggers the OAuth login link flow.</p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  Portfolio Management Team · built with Agno · system design generated from source inspection of <code>04-PortfolioManager/</code>
+</footer>
+
+</body>
+</html>

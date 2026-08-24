@@ -1,4 +1,5 @@
 agno
+mcp>=1.9,<2
 openai
 exa_py
 httpx
